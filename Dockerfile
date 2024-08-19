@@ -24,6 +24,8 @@ RUN git clone https://github.com/comfyanonymous/ComfyUI.git /comfyui
 # Change working directory to ComfyUI
 WORKDIR /comfyui
 
+RUN apt install build-essential -y && apt install libpython3.10-dev -y && pip3 install insightface
+
 # Install ComfyUI dependencies
 RUN pip3 install --upgrade --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121 \
     && pip3 install --upgrade -r requirements.txt
@@ -38,8 +40,9 @@ ADD src/extra_model_paths.yaml ./
 WORKDIR /
 
 # Add the start and the handler
-ADD src/start.sh src/rp_handler.py test_input.json ./
+ADD src/start.sh src/install.sh src/rp_handler.py test_input.json ./
 RUN chmod +x /start.sh
+RUN bash /install.sh
 
 # Stage 2: Download models
 FROM base as downloader
@@ -64,6 +67,7 @@ FROM base as final
 
 # Copy models from stage 2 to the final image
 COPY --from=downloader /comfyui/models /comfyui/models
+COPY --from=downloader /comfyui/custom_nodes /comfyui/custom_nodes
 
 # Start the container
 CMD /start.sh
